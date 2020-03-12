@@ -67,6 +67,13 @@ QModbusRtuSerialMaster::QModbusRtuSerialMaster(QObject *parent)
     d->setupSerialPort();
 }
 
+QModbusRtuSerialMaster::QModbusRtuSerialMaster(QBuffer* input, QBuffer* output, QObject *parent)
+    : QModbusClient(*new QModbusRtuSerialMasterPrivate, parent)
+{
+    Q_D(QModbusRtuSerialMaster);
+    d->setupBuffers(input, output);
+}
+
 /*!
     \internal
 */
@@ -126,12 +133,26 @@ bool QModbusRtuSerialMaster::open()
 
     Q_D(QModbusRtuSerialMaster);
     d->setupEnvironment(); // to be done before open
-    if (d->m_serialPort->open(QIODevice::ReadWrite)) {
-        setState(QModbusDevice::ConnectedState);
-        d->m_serialPort->clear(); // only possible after open
-    } else {
-        setError(d->m_serialPort->errorString(), QModbusDevice::ConnectionError);
+
+    if (d->m_serialPort) {
+        if (d->m_serialPort->open(QIODevice::ReadWrite)) {
+            setState(QModbusDevice::ConnectedState);
+            d->m_serialPort->clear(); // only possible after open
+        } else {
+            setError(d->m_serialPort->errorString(), QModbusDevice::ConnectionError);
+        }
     }
+
+    if (d->m_inputBuffer && d->m_outputBuffer) {
+        if (d->m_inputBuffer->isOpen() && d->m_outputBuffer->isOpen()) {
+            setState(QModbusDevice::ConnectedState);
+            d->m_inputBuffer->reset();
+            d->m_outputBuffer->reset();
+        } else {
+            setError(d->m_inputBuffer->errorString() + d->m_outputBuffer->errorString(), QModbusDevice::ConnectionError);
+        }
+    }
+
     return (state() == QModbusDevice::ConnectedState);
 }
 
@@ -147,7 +168,7 @@ void QModbusRtuSerialMaster::close()
 
     Q_D(QModbusRtuSerialMaster);
 
-    if (d->m_serialPort->isOpen())
+    if (d->m_serialPort && d->m_serialPort->isOpen())
         d->m_serialPort->close();
 
     // enqueue current active request back for abortion

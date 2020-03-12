@@ -38,6 +38,7 @@
 #define QMODBUSRTUSERIALMASTER_H
 
 #include <QtSerialBus/qmodbusclient.h>
+#include <QBuffer>
 
 QT_BEGIN_NAMESPACE
 
@@ -50,6 +51,7 @@ class Q_SERIALBUS_EXPORT QModbusRtuSerialMaster : public QModbusClient
 
 public:
     explicit QModbusRtuSerialMaster(QObject *parent = nullptr);
+    explicit QModbusRtuSerialMaster(QBuffer* input, QBuffer* output, QObject *parent = nullptr);
     ~QModbusRtuSerialMaster();
 
     int interFrameDelay() const;
